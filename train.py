@@ -37,7 +37,7 @@ args = parser.parse_args()
 
 
 #ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/'
-ROOT = '/kaggle' 
+ROOT = '../' 
 
 params = {
     #'ex_name': __file__.replace('.py', ''),
@@ -69,9 +69,9 @@ params = {
     'verifythresh': 30,
     'freqthresh': 3,
     #'base_ckpt_path': 'exp/v1only/ep4_augmentation-soft_epochs-5_loss-arcface.pth',
-    'data_root': '/kaggle/input/landmark-retrieval-2020',
-    'train_csv': '/kaggle/working/train.csv'，
-    'val_csv': '/kaggle/working/val.csv'
+    'data_root': ROOT+os.sep+'landmark-retrieval-2020',
+    'train_csv': ROOT+os.sep+'landmark-retrieval-2020/train.csv'，
+    'val_csv': ROOT+os.sep+'landmark-retrieval-2020/val.csv'
 }
 
 

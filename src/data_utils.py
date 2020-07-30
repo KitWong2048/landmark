@@ -45,6 +45,115 @@ def _cat_collate(batch):
     return img_ids, imgs
 
 
+
+def pad2square(im, desired_size):
+
+    old_size = im.shape[:2] # old_size is in (height, width) format
+
+    ratio = float(desired_size)/max(old_size)
+    new_size = tuple([int(x*ratio) for x in old_size])
+
+# new_size should be in (width, height) format
+
+    im = cv2.resize(im, (new_size[1], new_size[0]))
+
+    delta_w = desired_size - new_size[1]
+    delta_h = desired_size - new_size[0]
+    top, bottom = delta_h//2, delta_h-(delta_h//2)
+    left, right = delta_w//2, delta_w-(delta_w//2)
+
+    color = [0, 0, 0]
+    new_im = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT,value=color)
+
+    return new_im
+
+
+class LandmarkDataset1(Dataset):
+    # (width, height)
+    def __init__(self,
+                 df,
+                 class_ids,
+                 root_dir='/kaggle/input',
+                 transform=None,
+                 size=(512,512),
+                 ):
+        self.df = df
+        self.class_ids = class_ids
+        self.root_dir = root_dir
+        self.transform = transform
+
+    def __getitem__(self, index):
+        
+        data = df.ix[index]
+        img_path = data['id']
+        img_path = self.root_dir+os.sep+img_path[0]+os.sep+img_path[1]+os.sep+img_path[2]+os.sep+img_path+'.jpg'
+        #class_id = data['landmark_id']
+
+        img = cv2.imread(img_path)
+        assert img is not None, f'path: {img_path} is invalid.'
+        img = img[..., ::-1]
+
+        #resize and padding
+        img = pad2square(img, size)
+
+
+
+        #if self.aspect_gids is not None:
+        #    gid = self.aspect_gids[index]
+        #    img = cv2.resize(img, self.size_template[self.scale][gid])
+
+        
+
+        if self.transform is not None:
+            img = self.transform(image=img)['image']
+
+        img = torch.from_numpy(img.transpose((2, 0, 1))).float()
+
+        if self.class_ids is None:
+            return index, img
+        else:
+            target = torch.tensor(self.class_ids.ix[index]).long()
+            return index, img, target
+
+    def __len__(self):
+        return len(self.df)
+
+
+
+
+def make_data_loaders(data_root='/kaggle/input',
+                       train_csv='',
+                       val_csv='',
+                       train_transform=None,
+                       eval_transform=None,
+                       size = (512,512),
+                       batch_size = 32，
+                       num_workers=4):
+
+    train_df = pd.read_csv(train_csv)
+    train_id = train_df['id']
+    train_label = train_df['landmark_id']
+
+    val_df = pd.read_csv(val_csv)
+    val_id = val_df['id']
+    val_label = val_df['landmark_id']
+
+
+
+    train_dataset = LandmarkDataset1(train_df, train_id, root_dir=data_root, transform=train_transform, size=size)
+    val_dataset = LandmarkDataset1(val_df, val_id, root_dir=data_root, transform=eval_transform, size=size)
+
+
+
+    data_loaders = dict()
+    data_loaders['train'] = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    data_loaders['val'] = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+
+    return data_loaders
+
+        
+
 class LandmarkDataset(Dataset):
     # (width, height)
     size_template = {
